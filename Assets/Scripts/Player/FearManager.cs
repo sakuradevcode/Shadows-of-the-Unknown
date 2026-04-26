@@ -1,113 +1,119 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 public class FearManager : MonoBehaviour
 {
-    [Header("UI y Miedo")]
-    public Slider fearBar; // La barra visual en la pantalla
-    public float maxFear = 100f;
-    [Tooltip("Cuánto miedo suma por segundo en la oscuridad")]
-    public float fearIncreaseRate = 5f; 
-    [Tooltip("Cuánto miedo resta por segundo en la luz")]
-    public float fearDecreaseRate = 10f; 
-    
-    private float currentFear = 0f;
+    [Header("UI y Vida")]
+    public Slider lifeBar;
 
-    [Header("Linterna")]
-    public Light flashlight; // Asigna el Spotlight (hijo de la cámara)
-    public InputActionReference toggleFlashlightAction; // Tecla para encender/apagar (Ej: F)
-    
-    private bool isFlashlightOn = true;
+    public float maxLife = 100f;
+    public float lifeDecreaseRate = 5f;
+    public float lifeIncreaseRate = 10f;
 
-    // Usamos un contador en lugar de un booleano por si el jugador se para 
-    // en un lugar donde se cruzan dos luces externas a la vez.
-    private int externalLightsCount = 0; 
+    [Header("Referencias")]
+    public Light playerFlashlight;
 
-    void Start()
+    private bool isFlashlightOn = false;
+    private float currentLife;
+
+    // ahora guardamos luces reales
+    private List<Light> safeLights = new List<Light>();
+
+    private void Start()
     {
-        currentFear = 0f;
-        
-        if (fearBar != null)
+        currentLife = maxLife;
+
+        if (lifeBar != null)
         {
-            fearBar.maxValue = maxFear;
-            fearBar.value = currentFear;
-        }
-        
-        // Sincronizar el estado inicial de la linterna
-        if (flashlight != null)
-        {
-            isFlashlightOn = flashlight.enabled;
+            lifeBar.maxValue = maxLife;
+            lifeBar.value = currentLife;
         }
     }
 
-    void Update()
+    private void Update()
     {
-        // 1. Control de la Linterna
-        if (toggleFlashlightAction != null && toggleFlashlightAction.action.WasPressedThisFrame())
+        UpdateFlashlightState();
+        HandleLifeSystem();
+        UpdateUI();
+        CheckDeath();
+    }
+
+    private void UpdateFlashlightState()
+    {
+        if (playerFlashlight != null)
         {
-            isFlashlightOn = !isFlashlightOn;
-            if (flashlight != null)
+            isFlashlightOn =
+                playerFlashlight.enabled &&
+                playerFlashlight.gameObject.activeInHierarchy;
+        }
+    }
+
+    private void HandleLifeSystem()
+    {
+        bool hasActiveSafeLight = false;
+
+        // revisar en tiempo real si alguna luz externa sigue encendida
+        foreach (Light light in safeLights)
+        {
+            if (light != null &&
+                light.enabled &&
+                light.gameObject.activeInHierarchy)
             {
-                flashlight.enabled = isFlashlightOn;
+                hasActiveSafeLight = true;
+                break;
             }
         }
 
-        // 2. Lógica de Miedo (¿Estamos a salvo?)
-        bool isSafeInLight = isFlashlightOn || externalLightsCount > 0;
+        bool isSafeInLight =
+            isFlashlightOn ||
+            hasActiveSafeLight;
 
         if (isSafeInLight)
-        {
-            currentFear -= fearDecreaseRate * Time.deltaTime; // Relajarse
-        }
+            currentLife += lifeIncreaseRate * Time.deltaTime;
         else
-        {
-            currentFear += fearIncreaseRate * Time.deltaTime; // Asustarse
-        }
+            currentLife -= lifeDecreaseRate * Time.deltaTime;
 
-        // Mantener el valor entre 0 y el máximo
-        currentFear = Mathf.Clamp(currentFear, 0f, maxFear);
+        currentLife = Mathf.Clamp(currentLife, 0f, maxLife);
+    }
 
-        // 3. Actualizar la UI
-        if (fearBar != null)
-        {
-            fearBar.value = currentFear;
-        }
+    private void UpdateUI()
+    {
+        if (lifeBar != null)
+            lifeBar.value = currentLife;
+    }
 
-        // 4. ¿Qué pasa si el miedo llega al máximo?
-        if (currentFear >= maxFear)
+    private void CheckDeath()
+    {
+        if (currentLife <= 0f)
         {
-            // Aquí puedes agregar un Game Over, un sonido de grito, o reiniciar el nivel
-            Debug.Log("¡Te moriste de miedo!");
+            Debug.Log("¡Moriste!");
         }
     }
 
-    // --- DETECCIÓN DE ZONAS DE LUZ EXTERNAS ---
-
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("SafeLight"))
+        if (!other.CompareTag("SafeLight"))
+            return;
+
+        Light safeLight = other.GetComponentInChildren<Light>();
+
+        if (safeLight != null && !safeLights.Contains(safeLight))
         {
-            externalLightsCount++;
+            safeLights.Add(safeLight);
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("SafeLight"))
+        if (!other.CompareTag("SafeLight"))
+            return;
+
+        Light safeLight = other.GetComponentInChildren<Light>();
+
+        if (safeLight != null && safeLights.Contains(safeLight))
         {
-            externalLightsCount--;
+            safeLights.Remove(safeLight);
         }
-    }
-
-    // --- ACTIVAR INPUTS ---
-    private void OnEnable()
-    {
-        if (toggleFlashlightAction != null) toggleFlashlightAction.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (toggleFlashlightAction != null) toggleFlashlightAction.action.Disable();
     }
 }

@@ -17,7 +17,9 @@ public class KeypadDoor : MonoBehaviour
     [Header("Interfaz UI")]
     public GameObject keypadUI; // El Canvas/Panel del teclado
     public TMP_InputField inputField; // Donde se escribe el texto
-
+    
+    public LayerMask interactLayerMask;
+    
     private bool isDoorOpen = false;
     private bool isUIVisible = false;
 
@@ -33,7 +35,13 @@ public class KeypadDoor : MonoBehaviour
         {
             RaycastHit hit;
             // Lanzamos un láser desde la cámara hacia adelante
-            if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, interactionDistance))
+            if (Physics.Raycast(
+                    playerCamera.position,
+                    playerCamera.forward,
+                    out hit,
+                    interactionDistance,
+                    interactLayerMask
+                ))
             {
                 // Si el láser golpea ESTE objeto (la puerta)
                 if (hit.transform == transform || hit.transform.IsChildOf(transform))
