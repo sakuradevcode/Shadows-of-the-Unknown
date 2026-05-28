@@ -75,6 +75,11 @@ public class FearManager : MonoBehaviour
             currentLife -= lifeDecreaseRate * Time.deltaTime;
 
         currentLife = Mathf.Clamp(currentLife, 0f, maxLife);
+        
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.UpdateBreathing(currentLife, maxLife);
+        }
     }
 
     private void UpdateUI()

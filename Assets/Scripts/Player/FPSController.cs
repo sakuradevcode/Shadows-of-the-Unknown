@@ -6,7 +6,13 @@ using System.Collections;
 public class FPSController : MonoBehaviour
 {
     [Header("Movimiento")]
-    public float moveSpeed = 5f;
+    public float walkSpeed = 5f;
+    public float runMultiplier = 2f; // Multiplicador para correr (5 x 2 = 10)
+
+    [Header("Audio de Pasos")]
+    public AudioSource footstepsSource; // Arrastra aquí el AudioSource de tus pasos
+    public float walkStepSpeed = 1f;    // Pitch normal al caminar
+    public float runStepSpeed = 1.4f;   // Pitch acelerado al correr
 
     [Header("Cámara y Linterna")]
     public float mouseSensitivity = 0.2f;
@@ -96,10 +102,12 @@ public class FPSController : MonoBehaviour
 
     void FixedUpdate()
     {   
+        // Si el menú (UI) está abierto, detenemos físicas, animación y sonido
         if (Cursor.visible) 
         {
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0); 
             if (armsAnimator != null) armsAnimator.SetBool("isWalking", false);
+            if (footstepsSource != null && footstepsSource.isPlaying) footstepsSource.Pause();
             return;
         }
 
@@ -107,29 +115,50 @@ public class FPSController : MonoBehaviour
         
         Vector2 move = moveAction.action.ReadValue<Vector2>();
         Vector3 moveDirection = (transform.forward * move.y + transform.right * move.x).normalized;
-        Vector3 targetVelocity = moveDirection * moveSpeed;
-        targetVelocity.y = rb.linearVelocity.y; 
+        
+        // Detectar si presionamos Left Shift (Correr)
+        bool isRunning = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+        bool isMoving = move.sqrMagnitude > 0.01f;
+
+        // Calcular velocidad final
+        float currentSpeed = (isRunning && isMoving) ? walkSpeed * runMultiplier : walkSpeed;
+        Vector3 targetVelocity = moveDirection * currentSpeed;
+        targetVelocity.y = rb.linearVelocity.y; // Conservar gravedad
 
         rb.linearVelocity = targetVelocity;
         
-        if (armsAnimator != null)
+        // --- MANEJO DE ANIMACIONES Y AUDIO ---
+        if (isMoving)
         {
-            bool isMoving = move.sqrMagnitude > 0.01f;
-            armsAnimator.SetBool("isWalking", isMoving);
+            if (armsAnimator != null) armsAnimator.SetBool("isWalking", true);
+
+            if (footstepsSource != null)
+            {
+                if (!footstepsSource.isPlaying) footstepsSource.Play();
+                // Si corre, aceleramos el audio; si camina, vuelve a la normalidad
+                footstepsSource.pitch = isRunning ? runStepSpeed : walkStepSpeed;
+            }
+        }
+        else
+        {
+            if (armsAnimator != null) armsAnimator.SetBool("isWalking", false);
+
+            if (footstepsSource != null && footstepsSource.isPlaying)
+            {
+                footstepsSource.Pause();
+            }
         }
     }
     
     private IEnumerator ToggleLightSync()
     {
         yield return new WaitForSeconds(timeToToggleLight);
-        
         if (flashlight != null) flashlight.enabled = isLightOn;
     }
 
     private IEnumerator ReloadSync()
     {
         isReloading = true;
-        
         bool wasLightOnBeforeReload = isLightOn; 
         
         if (armsAnimator != null) armsAnimator.SetTrigger("reload");

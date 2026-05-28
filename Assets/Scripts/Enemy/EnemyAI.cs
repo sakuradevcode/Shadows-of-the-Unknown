@@ -3,46 +3,73 @@ using UnityEngine.AI;
 
 public class EnemyAI : MonoBehaviour
 {
-    public enum State { Patrolling, Chasing, Attacking, Dead }
+    public enum State { Patrolling, Chasing, Attacking, Fleeing, Dead }
     public State currentState;
 
     [Header("References")]
     private NavMeshAgent agent;
     private Animator animator;
-    public Transform player;
+    private Transform player;
 
     [Header("AI Configuration")]
     public float visionRadius = 10f;
     public float loseFocusDistance = 15f;
-    public float attackRange = 2f; // Remember to check if this is 2 or 6 in your Inspector!
+    public float attackRange = 2f; 
     public LayerMask obstacleLayer; 
     public float patrolRadius = 10f;
 
+    private Vector3 startPosition;
+    
     private bool isAttacking = false;
     
     private float pathUpdateTimer = 0f;
     private float pathUpdateInterval = 0.2f;
+    
+    private float fleeTimer = 0f; 
+    
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
-        
+
+        startPosition = transform.position;
         agent.autoBraking = false;
         
-        // CRITICAL FIX: Force extremely high acceleration and turning speed via code.
-        // This guarantees the agent reaches its max speed (4) almost instantly,
-        // preventing the "slow buildup" that gets interrupted by path recalculations.
         agent.acceleration = 60f;
         agent.angularSpeed = 500f;
 
         currentState = State.Patrolling;
         FindNewPatrolPoint();
+        
+        if (player == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            
+            if (playerObj != null)
+            {
+                player = playerObj.transform;
+            }
+            else
+            {
+                Debug.LogError("El enemigo no pudo encontrar al jugador.");
+            }
+        }
     }
 
     void Update()
     {
         if (currentState == State.Dead) return;
+        
+        if (fleeTimer > 0f)
+        {
+            fleeTimer -= Time.deltaTime;
+            
+            if (fleeTimer <= 0f && currentState == State.Fleeing)
+            {
+                currentState = State.Chasing; 
+            }
+        }
 
         switch (currentState)
         {
@@ -55,12 +82,50 @@ public class EnemyAI : MonoBehaviour
             case State.Attacking:
                 AttackBehavior();
                 break;
+            case State.Fleeing: 
+                FleeBehavior();
+                break;
         }
 
         UpdateAnimations();
     }
 
-    // --- State Logic ---
+    // Se llama la linterna cuando le da la luz
+    public void Repel()
+    {
+        if (currentState == State.Dead) return;
+        
+        // Cada vez que le da la luz, se renueva el tiempo de ceguera/huida
+        fleeTimer = 0.5f; 
+        currentState = State.Fleeing;
+        isAttacking = false; 
+    }
+
+    // ¿Qué hace cuando huye?
+    void FleeBehavior()
+    {
+        agent.updateRotation = true;
+        agent.stoppingDistance = 0f;
+        agent.isStopped = false;
+
+        pathUpdateTimer -= Time.deltaTime;
+        
+        if (pathUpdateTimer <= 0f)
+        {
+            // Calcula la dirección contraria a donde está el jugador
+            Vector3 directionAwayFromPlayer = (transform.position - player.position).normalized;
+            
+            // Le dice al NavMesh que corra hacia un punto que está 5 metros detrás de él
+            Vector3 fleeTarget = transform.position + (directionAwayFromPlayer * 5f); 
+
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(fleeTarget, out hit, 5.0f, NavMesh.AllAreas))
+            {
+                agent.SetDestination(hit.position);
+            }
+            pathUpdateTimer = pathUpdateInterval;
+        }
+    }
 
     void PatrolBehavior()
     {   
@@ -102,13 +167,8 @@ public class EnemyAI : MonoBehaviour
         if (pathUpdateTimer <= 0f && !agent.pathPending)
         {
             NavMeshHit hit;
-            // We search for a valid walkable point within 5 meters of the player
             if (NavMesh.SamplePosition(player.position, out hit, 5.0f, NavMesh.AllAreas))
             {
-                // CRITICAL FIX: The Anti-Stutter Shield for Partial Paths.
-                // We ONLY ask Unity to recalculate the route if the player has moved 
-                // more than 1 meter away from the monster's current destination.
-                // This stops the engine from spamming 0 velocity to recalculate impossible paths.
                 if (Vector3.Distance(agent.destination, hit.position) > 1.0f || !agent.hasPath)
                 {
                     agent.SetDestination(hit.position);
@@ -174,7 +234,7 @@ public class EnemyAI : MonoBehaviour
 
     void FindNewPatrolPoint()
     {
-        Vector3 randomPoint = transform.position + Random.insideUnitSphere * patrolRadius;
+        Vector3 randomPoint = startPosition + Random.insideUnitSphere * patrolRadius;
         NavMeshHit hit;
         
         if (NavMesh.SamplePosition(randomPoint, out hit, patrolRadius, NavMesh.AllAreas))
@@ -206,13 +266,8 @@ public class EnemyAI : MonoBehaviour
 
     void UpdateAnimations()
     {
-        // CRITICAL FIX: Use 'desiredVelocity' instead of 'velocity'.
-        // 'velocity' is the actual physical speed (which stutters on bumps and corners).
-        // 'desiredVelocity' is what the AI WANTS to do (always max speed when chasing).
-        // This keeps the Run animation playing perfectly smooth no matter what the physics engine is doing.
         float speed = agent.desiredVelocity.magnitude;
         
-        // If the agent is forcefully stopped (like when dead or attacking), force speed to 0
         if (agent.isStopped)
         {
             speed = 0f;
@@ -226,7 +281,6 @@ public class EnemyAI : MonoBehaviour
         Vector3 direction = (player.position - transform.position).normalized;
         direction.y = 0f; 
         
-        // Safety check to prevent Unity error if enemy is exactly inside the player
         if (direction != Vector3.zero)
         {
             Quaternion lookRotation = Quaternion.LookRotation(direction);
