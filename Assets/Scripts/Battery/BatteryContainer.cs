@@ -24,6 +24,10 @@ public class BatteryContainer : MonoBehaviour
     [Tooltip("Lista de layers interactuables")]
     public LayerMask interactLayerMask;
 
+    [Header("Configuración de Sonido (SFX)")]
+    public AudioSource pickupSource;
+    
+
     private bool isPlayerNearby = false;
 
     private void Update()
@@ -66,23 +70,38 @@ public class BatteryContainer : MonoBehaviour
 
     private void PickupOneBattery()
     {
+        // 1. Identificamos qué pila visual vamos a agarrar
         GameObject batteryToRemove = batteries[0];
 
         if (batteryToRemove != null)
         {
+            // --- LA MAGIA DEL AUDIO ---
+            // 2. Tomamos el componente AudioSource específico de ESTA pila hija
+            AudioSource childSource = batteryToRemove.GetComponent<AudioSource>();
+
+            // 3. Verificamos que todo exista y extraemos el sonido (clip) de la pila
+            // para reproducirlo en el parlante seguro del mueble (pickupSource)
+            if (pickupSource != null && childSource != null && childSource.clip != null)
+            {
+                pickupSource.PlayOneShot(childSource.clip);
+            }
+            // --------------------------
+
+            // 4. Ahora sí, podemos apagar la pila visualmente sin miedo a cortar el audio
             batteryToRemove.SetActive(false);
         }
 
+        // Removemos la pila de la lista lógica
         batteries.RemoveAt(0);
 
-        FlashlightBatterySystem batterySystem =
-            FindObjectOfType<FlashlightBatterySystem>();
-
+        // Sumamos la carga a la linterna
+        FlashlightBatterySystem batterySystem = FindObjectOfType<FlashlightBatterySystem>();
         if (batterySystem != null)
         {
             batterySystem.AddBattery(batteryAmountPerPickup);
         }
 
+        // Si ya no quedan pilas, ocultamos la UI
         if (batteries.Count <= 0)
         {
             if (InteractionUIManager.Instance != null)

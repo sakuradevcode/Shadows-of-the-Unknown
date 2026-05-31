@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - SafeLight
+  - Truck
   layers:
   - Default
   - TransparentFX

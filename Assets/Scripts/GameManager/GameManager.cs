@@ -16,7 +16,6 @@ public class GameManager : MonoBehaviour
     
     [Header("Sistema de Audio Global")]
     public AudioSource ambientMusicSource;
-    public AudioSource breathingSource;
     
     private void Awake()
     {
@@ -59,13 +58,6 @@ public class GameManager : MonoBehaviour
             ambientMusicSource.loop = true;
             ambientMusicSource.Play();
         }
-
-        if (breathingSource != null)
-        {
-            breathingSource.loop = true; // Respiración en bucle infinito
-            breathingSource.pitch = 1.0f; // Velocidad normal
-            breathingSource.Play();
-        }
     }
 
     // --- 3. MANEJADOR DE MISIONES ---
@@ -75,27 +67,6 @@ public class GameManager : MonoBehaviour
         if (missionTextUI != null)
         {
             missionTextUI.text = "Misión Actual: " + newMission;
-        }
-    }
-
-    // --- 4. RESPIRACIÓN DINÁMICA ---
-    // Esta función ahora es llamada automáticamente y en tiempo real por el FearManager
-    public void UpdateBreathing(float currentLife, float maxLife)
-    {
-        if (breathingSource == null) return;
-
-        float healthPercentage = currentLife / maxLife;
-
-        // Si la vida baja del 40%, el jugador empieza a hiperventilar por el miedo
-        if (healthPercentage <= 0.4f)
-        {
-            float targetPitch = Mathf.Lerp(1.7f, 1.0f, healthPercentage / 0.4f);
-            breathingSource.pitch = targetPitch;
-        }
-        else
-        {
-            // Si está a salvo (más del 40%), respira normal
-            breathingSource.pitch = 1.0f; 
         }
     }
 }

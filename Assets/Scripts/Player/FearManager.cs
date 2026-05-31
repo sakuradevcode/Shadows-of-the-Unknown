@@ -81,15 +81,9 @@ public class FearManager : MonoBehaviour
             currentLife -= lifeDecreaseRate * Time.deltaTime;
 
         currentLife = Mathf.Clamp(currentLife, 0f, maxLife);
-        
-        // Si seguís usando esto en el GameManager, lo dejamos para que siga mandando datos
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.UpdateBreathing(currentLife, maxLife);
-        }
 
         UpdateRedScreenEffect();
-        UpdateBreathingSpeed(); // Llamamos a la nueva función
+        UpdateBreathingSpeed();
     }
 
     private void UpdateRedScreenEffect()

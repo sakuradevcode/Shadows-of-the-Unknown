@@ -43,6 +43,9 @@ public class FPSController : MonoBehaviour
     public Animator armsAnimator; 
     public Light flashlight; 
     
+    [Header("Configuración de Sonido (SFX)")]
+    public AudioSource switchSource;
+    
     public FlashlightBatterySystem batterySystem;
     
     private bool isLightOn = true; 
@@ -87,6 +90,11 @@ public class FPSController : MonoBehaviour
         if (toggleLightAction != null && toggleLightAction.action.WasPerformedThisFrame() && !isReloading)
         {
             isLightOn = !isLightOn;
+            
+            if (switchSource != null)
+            {
+                switchSource.Play();
+            }
 
             if (armsAnimator != null)
             {

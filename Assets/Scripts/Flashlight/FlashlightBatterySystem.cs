@@ -26,11 +26,21 @@ public class FlashlightBatterySystem : MonoBehaviour
 
     [Header("References")]
     public Light flashlight;
+    public Light boostLight;
     public Animator armsAnimator;
 
     [Header("Animation")]
     [Tooltip("Nombre del trigger de recarga en el Animator")]
     public string reloadTriggerName = "reload";
+
+    [Header("Configuración de Sonido (SFX)")]
+    public AudioSource powerUpSource;
+    
+    [Header("Input System")]
+    [Tooltip("Arrastrá acá tu Action para el Boost (Ej: Clic Izquierdo)")]
+    public InputActionReference boostAction;
+    
+    private bool wasBoosting = false;
 
     private float currentBatteryCharge;
     private bool isFlashlightOn;
@@ -74,19 +84,29 @@ public class FlashlightBatterySystem : MonoBehaviour
     {
         if (!isFlashlightOn)
         {
+            if (boostLight != null)
+            {
+                boostLight.enabled = false;
+            }
             ResetFlashlightToNormal();
             return;
         }
-
-        // --- NUEVA LÓGICA DE BOOST ---
-        // Detectar si mantenemos el clic izquierdo presionado
-        bool isBoosting = Mouse.current != null && Mouse.current.leftButton.isPressed;
+        
+        bool isBoosting = boostAction != null && boostAction.action.IsPressed();
 
         if (isBoosting)
         {
-            // Aplicar efectos visuales de potencia
-            flashlight.intensity = normalIntensity * boostIntensityMultiplier;
-            flashlight.spotAngle = boostSpotAngle;
+            
+            if (!wasBoosting && powerUpSource != null)
+            {
+                powerUpSource.Play();
+                wasBoosting = true;
+            }
+            
+            if (boostLight != null)
+            {
+                boostLight.enabled = true;
+            }
             
             // Drenar batería más rápido
             currentBatteryCharge -= boostDrainRate * Time.deltaTime;
@@ -107,8 +127,13 @@ public class FlashlightBatterySystem : MonoBehaviour
         else
         {
             // Estado normal
-            ResetFlashlightToNormal();
+            wasBoosting = false;
             currentBatteryCharge -= batteryDrainRate * Time.deltaTime;
+            if (boostLight != null)
+            {
+                boostLight.enabled = false;
+            }
+            ResetFlashlightToNormal();
         }
         // -----------------------------
 
@@ -153,8 +178,14 @@ public class FlashlightBatterySystem : MonoBehaviour
         isReloading = true;
 
         // apagar linterna inmediatamente
-        if (flashlight != null)
+        if (flashlight != null) {
             flashlight.enabled = false;
+        }
+
+        if (boostLight != null)
+        {
+            boostLight.enabled = false;
+        }
 
         // lanzar animación
         if (armsAnimator != null)
@@ -201,5 +232,21 @@ public class FlashlightBatterySystem : MonoBehaviour
         UpdateBatteryText();
 
         Debug.Log("Baterías actuales: " + totalBatteries);
+    }
+    
+    private void OnEnable()
+    {
+        if (boostAction != null)
+        {
+            boostAction.action.Enable();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (boostAction != null)
+        {
+            boostAction.action.Disable();
+        }
     }
 }
