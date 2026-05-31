@@ -247,7 +247,14 @@ public class EnemyAI : MonoBehaviour
     void AttackPlayer()
     {
         isAttacking = true;
-        animator.SetTrigger("Attack"); 
+        animator.SetTrigger("Attack");
+        
+        FearManager playerHealth = player.GetComponent<FearManager>();
+        
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(50f);
+        }
         
         Invoke(nameof(EndAttack), 1.5f); 
     }

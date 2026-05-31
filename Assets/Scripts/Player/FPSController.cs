@@ -20,6 +20,9 @@ public class FPSController : MonoBehaviour
     public Transform cameraHead; 
     public float minPitch = -80f; 
     public float maxPitch = 80f;  
+    
+    [Tooltip("Distancia máxima para poder interactuar con objetos")]
+    public float interactRange = 2.5f;
 
     [Header("Tiempos de Sincronización (Segundos)")]
     [Tooltip("Cuánto tarda la mano en tocar el botón de prender/apagar")]
@@ -40,6 +43,8 @@ public class FPSController : MonoBehaviour
     public Animator armsAnimator; 
     public Light flashlight; 
     
+    public FlashlightBatterySystem batterySystem;
+    
     private bool isLightOn = true; 
     private bool isReloading = false;
     
@@ -51,6 +56,11 @@ public class FPSController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        
+        if (batterySystem == null)
+        {
+            batterySystem = GetComponent<FlashlightBatterySystem>();
+        }
     }
 
     void Update()
@@ -90,14 +100,25 @@ public class FPSController : MonoBehaviour
         // --- RELOAD ---
         if (reloadAction != null && reloadAction.action.WasPerformedThisFrame() && !isReloading)
         {
-            StartCoroutine(ReloadSync());
+            // Primero preguntamos si el script de baterías existe y si tenemos pilas
+            if (batterySystem != null && batterySystem.totalBatteries > 0)
+            {
+                // Solo si hay pilas (> 0) lanzamos la recarga
+                StartCoroutine(ReloadSync());
+            }
+            else
+            {
+                Debug.Log("No hay baterías para recargar.");
+                // Opcional: Podrías reproducir un sonido de "clic" de que no hay pilas acá
+            }
         }
         
         // --- INTERACT ---
-        if (interactAction != null && interactAction.action.WasPerformedThisFrame() && !isReloading)
+       if (interactAction != null && interactAction.action.WasPerformedThisFrame() && !isReloading)
         {
             if (armsAnimator != null) armsAnimator.SetTrigger("interact");
         }
+        
     }
 
     void FixedUpdate()
