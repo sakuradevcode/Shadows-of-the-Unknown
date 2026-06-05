@@ -84,6 +84,12 @@ public class FearManager : MonoBehaviour
 
         UpdateRedScreenEffect();
         UpdateBreathingSpeed();
+        
+        if (AdaptiveMusicManager.Instance != null)
+        {
+            bool isLow = currentLife <= (maxLife * 0.5f);
+            AdaptiveMusicManager.Instance.SetLowHealth(isLow);
+        }
     }
 
     private void UpdateRedScreenEffect()

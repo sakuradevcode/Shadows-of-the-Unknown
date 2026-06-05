@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.Audio;
-using TMPro; // Necesario para la UI de texto
+using TMPro; 
 using System.Collections;
 
 public class VoiceManager : MonoBehaviour
@@ -10,10 +10,12 @@ public class VoiceManager : MonoBehaviour
     [Header("Configuración de Audio")]
     public AudioSource voiceSource;
     public AudioMixer mainMixer;
-    public string duckingParameter = "MusicVolume";
+    // Ahora tenemos dos parámetros expuestos
+    public string musicDuckingParameter = "MusicVolume"; 
+    public string sfxDuckingParameter = "SFXVolume";     
 
     [Header("Configuración de Subtítulos")]
-    public TextMeshProUGUI subtitleTextUI; // Arrastrá acá tu texto de UI
+    public TextMeshProUGUI subtitleTextUI; 
 
     [Header("Frase 1: Inicio")]
     public AudioClip phrase1_Start;
@@ -41,10 +43,8 @@ public class VoiceManager : MonoBehaviour
 
     private void Start()
     {
-        // Ocultar el texto de subtítulos al inicio
         if (subtitleTextUI != null) subtitleTextUI.text = "";
 
-        // Disparamos las automáticas
         StartCoroutine(PlayVoiceRoutine(phrase1_Start, text1, 1f));
         StartCoroutine(PlayVoiceRoutine(phrase2_Enemies, text2, 10f));
     }
@@ -69,36 +69,39 @@ public class VoiceManager : MonoBehaviour
         
         if (voiceSource.isPlaying) yield return new WaitUntil(() => !voiceSource.isPlaying);
 
-        // Preparamos audio y subtítulo
         voiceSource.clip = clip;
         if (subtitleTextUI != null) subtitleTextUI.text = subtitleLine;
         
         voiceSource.Play();
-
-        // Ducking In
+        
         float elapsedTime = 0f;
         float fadeTime = 0.5f;
-        mainMixer.GetFloat(duckingParameter, out float startVol);
+        
+        mainMixer.GetFloat(musicDuckingParameter, out float startVolMusic);
+        mainMixer.GetFloat(sfxDuckingParameter, out float startVolSFX);
         
         while (elapsedTime < fadeTime)
         {
             elapsedTime += Time.deltaTime;
-            mainMixer.SetFloat(duckingParameter, Mathf.Lerp(startVol, -15f, elapsedTime / fadeTime));
+            float t = elapsedTime / fadeTime; // Normalizamos el tiempo entre 0 y 1
+            
+            mainMixer.SetFloat(musicDuckingParameter, Mathf.Lerp(startVolMusic, -15f, t));
+            mainMixer.SetFloat(sfxDuckingParameter, Mathf.Lerp(startVolSFX, -15f, t));
             yield return null;
         }
-
-        // Espera lo que dure la frase
+        
         yield return new WaitForSeconds(clip.length);
 
-        // Limpia el subtítulo de la pantalla
         if (subtitleTextUI != null) subtitleTextUI.text = "";
-
-        // Ducking Out
+        
         elapsedTime = 0f;
         while (elapsedTime < fadeTime)
         {
             elapsedTime += Time.deltaTime;
-            mainMixer.SetFloat(duckingParameter, Mathf.Lerp(-15f, 0f, elapsedTime / fadeTime));
+            float t = elapsedTime / fadeTime;
+            
+            mainMixer.SetFloat(musicDuckingParameter, Mathf.Lerp(-15f, startVolMusic, t));
+            mainMixer.SetFloat(sfxDuckingParameter, Mathf.Lerp(-15f, startVolSFX, t));
             yield return null;
         }
     }

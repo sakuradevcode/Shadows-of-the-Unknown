@@ -88,6 +88,12 @@ public class EnemyAI : MonoBehaviour
         }
 
         UpdateAnimations();
+        if (AdaptiveMusicManager.Instance != null)
+        {
+            bool isAggressive = (currentState == State.Chasing || currentState == State.Attacking || currentState == State.Fleeing);
+            
+            AdaptiveMusicManager.Instance.SetEnemyChasing(this.gameObject, isAggressive);
+        }
     }
 
     // Se llama la linterna cuando le da la luz
