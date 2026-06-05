@@ -10,9 +10,6 @@ public class GameManager : MonoBehaviour
     [Header("Instanciación (Spawns)")]
     public GameObject enemyPrefab;
     public Transform[] enemySpawnPoints;
-
-    [Header("Sistema de Misiones")]
-    public TextMeshProUGUI missionTextUI;
     
     [Header("Sistema de Audio Global")]
     public AudioSource ambientMusicSource;
@@ -34,7 +31,6 @@ public class GameManager : MonoBehaviour
     {
         SpawnEntities();
         StartAtmosphere();
-        UpdateMission("Encuentra la manera de salir de la cabaña.");
     }
 
     // --- 1. INSTANCIADOR ---
@@ -57,16 +53,6 @@ public class GameManager : MonoBehaviour
         {
             ambientMusicSource.loop = true;
             ambientMusicSource.Play();
-        }
-    }
-
-    // --- 3. MANEJADOR DE MISIONES ---
-    // Cualquier script puede llamar a: GameManager.Instance.UpdateMission("Nueva misión!");
-    public void UpdateMission(string newMission)
-    {
-        if (missionTextUI != null)
-        {
-            missionTextUI.text = "Misión Actual: " + newMission;
         }
     }
 }

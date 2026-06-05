@@ -35,6 +35,8 @@ public class BookInteract : MonoBehaviour
 
             hasBeenRead = true; // Lo marcamos como leído
             
+            MissionManager.Instance.ReadBook();
+            
             // Ocultamos el cartel de la UI porque ya interactuó
             if (InteractionUIManager.Instance != null)
             {

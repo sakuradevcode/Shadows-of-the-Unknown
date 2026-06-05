@@ -5,7 +5,7 @@ using System.Collections;
 public class TruckObserver : MonoBehaviour
 {
     [Header("Configuración de Visión")]
-    public float visionDistance = 50f;
+    public float visionDistance = 30f;
     public string truckTag = "Truck";
     
     [Header("Optimización")]
@@ -78,6 +78,8 @@ public class TruckObserver : MonoBehaviour
                     hasSeenTruck = true;
                     isSearchActive = false;
 
+                    MissionManager.Instance.TruckFound();
+                    
                     // ---> NUEVO: Apagamos la flecha porque ya vimos el camión
                     if (pointerArrow != null)
                     {

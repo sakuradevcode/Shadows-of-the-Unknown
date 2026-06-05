@@ -6,6 +6,15 @@ using System.Collections;
     
 public class KeypadDoor : MonoBehaviour
 {
+    public enum DoorType
+    {
+        HouseDoor,
+        BathroomDoor
+    }
+
+    [Header("Configuración de Misiones")]
+    public DoorType doorType;
+    
     [Header("Botones UI")]
     public Button confirmButton;
     public Button closeButton;
@@ -62,7 +71,16 @@ public class KeypadDoor : MonoBehaviour
             {
                 // Si el láser golpea ESTE objeto (la puerta)
                 if (hit.transform == transform || hit.transform.IsChildOf(transform))
-                {
+                {   
+                    if (doorType == DoorType.HouseDoor)
+                    {
+                        MissionManager.Instance.TryOpenHouse(); 
+                    }
+                    else if (doorType == DoorType.BathroomDoor)
+                    {
+                        MissionManager.Instance.TryOpenBathroom(); 
+                    }
+                    
                     OpenKeypad();
                 }
             }
@@ -98,6 +116,15 @@ public class KeypadDoor : MonoBehaviour
             CloseKeypad();
             
             StartCoroutine(OpenDoorSmoothly());
+            
+            if (doorType == DoorType.HouseDoor)
+            {
+                MissionManager.Instance.OpenHouse(); 
+            }
+            else if (doorType == DoorType.BathroomDoor)
+            {
+                MissionManager.Instance.OpenBathroom(); 
+            }
             
             Debug.Log("¡Puerta Abierta!");
         }
